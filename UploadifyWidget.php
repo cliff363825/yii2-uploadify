@@ -53,11 +53,7 @@ class UploadifyWidget extends InputWidget
             $this->clientOptions['swf'] = $asset->baseUrl . '/uploadify.swf';
         }
         $id = $this->options['id'];
-        $js = "
-(function($){
-    $('#{$id}').uploadify(" . Json::encode($this->clientOptions) . ");
-})(jQuery);
-";
+        $js = "jQuery('#{$id}').uploadify(" . Json::encode($this->clientOptions) . ");";
         $view->registerJs($js);
     }
 
