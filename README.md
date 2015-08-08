@@ -29,6 +29,13 @@ Once the extension is installed, simply use it in your code by  :
 
 ```php
 <?= \cliff363825\uploadify\UploadifyWidget::widget([
+    // use it with a model, uncomment below
+    // 'model' => $model,
+    // 'attribute' => $model->file,
+
+    // use it without a model, uncomment below
+    // 'name' => '...',
+
     'clientOptions' => [
         'uploader' => Url::to(['uploadify']),
         'multi' => false,
@@ -47,3 +54,5 @@ function (file, data, response) {
     ],
 ]); ?>
 ```
+
+For full details on usage, see the [documentation](http://www.uploadify.com/documentation/).
