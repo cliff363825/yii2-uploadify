@@ -28,4 +28,22 @@ Usage
 Once the extension is installed, simply use it in your code by  :
 
 ```php
-<?= \cliff363825\uploadify\AutoloadExample::widget(); ?>```
+<?= \cliff363825\uploadify\UploadifyWidget::widget([
+    'clientOptions' => [
+        'uploader' => Url::to(['uploadify']),
+        'multi' => false,
+        'onUploadSuccess' => new JsExpression("
+function (file, data, response) {
+    data = $.parseJSON(data);
+    if (data.error == 0) {
+        var url = data.url;
+        $('ul.image_list').html('<li><img src=\"' + url + '\" alt=\"\" class=\"img-thumbnail\"></li>');
+        $('input[name=\"...\"]').val(url);
+    } else {
+        alert(data.message);
+    }
+}"
+        ),
+    ],
+]); ?>
+```
