@@ -7,12 +7,30 @@ use yii\base\Action;
 /**
  * Class UploadifyAction
  * @package cliff363825\uploadify
- * @property string $targetPath
- * @property string $targetUrl
  * @property int $maxSize
  */
 class UploadifyAction extends Action
 {
+    /**
+     * 文件上传根路径
+     * @var string
+     */
+    public $basePath = '@webroot';
+    /**
+     * 文件上传根url
+     * @var string
+     */
+    public $baseUrl = '@web';
+    /**
+     * 文件保存相对路径
+     * @var string
+     */
+    public $savePath = 'uploads';
+    /**
+     * 文件保存子目录路径
+     * @var array|\Closure|array
+     */
+    public $subPath = ['date', 'Ym/d'];
     /**
      * @var string
      */
@@ -28,17 +46,6 @@ class UploadifyAction extends Action
      */
     public $extensions = ['jpg', 'jpeg', 'gif', 'png'];
     /**
-     * the file path used to save the uploaded file
-     * 文件保存目录路径
-     * @var string
-     */
-    private $_targetPath = '@webroot/uploads';
-    /**
-     * 文件保存目录URL
-     * @var string
-     */
-    private $_targetUrl = '@web/uploads';
-    /**
      * the maximum number of bytes required for the uploaded file.
      * 最大文件大小
      * @var int
@@ -51,15 +58,13 @@ class UploadifyAction extends Action
     public function run()
     {
         // Define a destination
-        $targetPath = $this->getTargetPath() . '/';
-        $targetUrl = $this->getTargetUrl() . '/';
-
+        $basePath = rtrim(Yii::getAlias($this->basePath), '\\/') . '/';
+        $baseUrl = rtrim(Yii::getAlias($this->baseUrl), '\\/') . '/';
         $timestamp = isset($_POST['timestamp']) ? $_POST['timestamp'] : '';
         $token = isset($_POST['token']) ? $_POST['token'] : '';
         $verifyToken = md5($this->uniqueSalt . $timestamp);
         $fileObjName = $this->fileObjName;
         $maxSize = $this->getMaxSize();
-
         if (empty($_FILES)) {
             $this->sendJson(1, 'File not found.');
         }
@@ -69,11 +74,9 @@ class UploadifyAction extends Action
         if (!empty($_FILES[$fileObjName]['error'])) {
             $this->sendJson(1, 'Upload failed:' . $_FILES[$fileObjName]['error']);
         }
-
         $tempFile = $_FILES[$fileObjName]['tmp_name'];
         $fileName = $_FILES[$fileObjName]['name'];
         $fileSize = $_FILES[$fileObjName]['size'];
-
         // Validate the file size
         if ($fileSize > $maxSize) {
             $this->sendJson(1, 'File too large.');
@@ -84,19 +87,18 @@ class UploadifyAction extends Action
         if (!in_array($fileExt, $fileTypes)) {
             $this->sendJson(1, 'Invalid file type.');
         }
-        $ymd = date('Ym/d');
-        $targetPath .= $ymd . '/';
-        $targetUrl .= $ymd . '/';
-        if (!file_exists($targetPath)) {
-            mkdir($targetPath, 0777, true);
+        $savePath = rtrim($this->savePath, '\\/') . '/';
+        $savePath .= rtrim($this->resolveSubPath($this->subPath, $fileName), '\\/') . '/';
+        if (!is_dir($basePath . $savePath)) {
+            mkdir($basePath . $savePath, 0755, true);
         }
         $newFilename = date("YmdHis") . '_' . rand(10000, 99999) . '.' . $fileExt;
-        $targetFilePath = $targetPath . $newFilename;
-        $targetFileUrl = $targetUrl . $newFilename;
-        if (!move_uploaded_file($tempFile, $targetFilePath)) {
+        $filePath = $basePath . $savePath . $newFilename;
+        $fileUrl = $baseUrl . $savePath . $newFilename;
+        if (!move_uploaded_file($tempFile, $filePath)) {
             $this->sendJson(1, 'Server error.');
         }
-        $this->sendJson(0, 'OK', $targetFileUrl);
+        $this->sendJson(0, 'OK', $savePath . $newFilename);
     }
 
     /**
@@ -116,38 +118,6 @@ class UploadifyAction extends Action
     }
 
     /**
-     * @return string
-     */
-    public function getTargetPath()
-    {
-        return rtrim(Yii::getAlias($this->_targetPath), '\\/');
-    }
-
-    /**
-     * @param string $targetPath
-     */
-    public function setTargetPath($targetPath)
-    {
-        $this->_targetPath = $targetPath;
-    }
-
-    /**
-     * @return string
-     */
-    public function getTargetUrl()
-    {
-        return rtrim(Yii::getAlias($this->_targetUrl), '\\/');
-    }
-
-    /**
-     * @param string $targetUrl
-     */
-    public function setTargetUrl($targetUrl)
-    {
-        $this->_targetUrl = $targetUrl;
-    }
-
-    /**
      * @return int
      */
     public function getMaxSize()
@@ -161,5 +131,25 @@ class UploadifyAction extends Action
     public function setMaxSize($maxSize)
     {
         $this->_maxSize = (int)$maxSize;
+    }
+
+    /**
+     * @param array|\Closure|string $subPath
+     * @param string $fileName
+     * @return string
+     */
+    private function resolveSubPath($subPath, $fileName)
+    {
+        $path = '';
+        if ($subPath instanceof \Closure) {
+            $path = call_user_func($subPath, $fileName);
+        } elseif (is_array($subPath)) {
+            $func = array_shift($subPath);
+            $params = $subPath;
+            $path = call_user_func_array($func, $params);
+        } elseif (is_string($subPath)) {
+            $path = $subPath;
+        }
+        return $path;
     }
 }
