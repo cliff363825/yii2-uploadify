@@ -78,6 +78,7 @@ class UploadifyWidget extends InputWidget
     {
         $timestamp = time();
         return [
+            'uploader' => '',
             'formData' => [
                 'timestamp' => $timestamp,
                 'token' => md5($this->uniqueSalt . $timestamp),
